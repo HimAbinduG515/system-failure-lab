@@ -1,6 +1,8 @@
 import { ExperimentResult } from '@/types/chaos';
-import { FlaskConical, Clock, Layers, AlertCircle, CheckCircle2, Lightbulb } from 'lucide-react';
+import { FlaskConical, Clock, Layers, AlertCircle, CheckCircle2, Lightbulb, ChevronRight, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { ExperimentAnalysis } from './ExperimentAnalysis';
 
 interface ExperimentPanelProps {
   currentExperiment: ExperimentResult | null;
@@ -8,6 +10,23 @@ interface ExperimentPanelProps {
 }
 
 export function ExperimentPanel({ currentExperiment, experimentHistory }: ExperimentPanelProps) {
+  const [selectedExperiment, setSelectedExperiment] = useState<ExperimentResult | null>(null);
+
+  if (selectedExperiment) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setSelectedExperiment(null)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronRight className="w-4 h-4 rotate-180" />
+          Back to experiments
+        </button>
+        <ExperimentAnalysis experiment={selectedExperiment} />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card border rounded-xl p-6">
       <div className="flex items-center gap-3 mb-6">
@@ -15,7 +34,7 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
           <FlaskConical className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h2 className="font-semibold text-foreground">Experiment Analysis</h2>
+          <h2 className="font-semibold text-foreground">Experiment Lab</h2>
           <p className="text-sm text-muted-foreground">Failure observations & insights</p>
         </div>
       </div>
@@ -25,6 +44,7 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-warning animate-pulse" />
             <span className="text-sm font-medium text-warning">Active Experiment</span>
+            <Activity className="w-3 h-3 text-warning animate-pulse ml-auto" />
           </div>
           
           <div className="bg-warning/5 border border-warning/20 rounded-lg p-4">
@@ -34,20 +54,33 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
             </div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Failure Type</span>
-              <span className="font-mono text-sm text-warning">{currentExperiment.failureType}</span>
+              <span className={cn(
+                "font-mono text-sm px-2 py-0.5 rounded",
+                currentExperiment.failureType === 'stop' ? 'bg-destructive/20 text-destructive' :
+                currentExperiment.failureType === 'latency' ? 'bg-warning/20 text-warning' :
+                'bg-destructive/20 text-destructive'
+              )}>
+                {currentExperiment.failureType}
+              </span>
             </div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Cascade Depth</span>
               <span className="font-mono text-sm text-foreground">{currentExperiment.cascadeDepth} levels</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">Affected Services</span>
               <span className="font-mono text-sm text-destructive">{currentExperiment.affectedServices.length}</span>
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Duration</span>
+              <span className="font-mono text-sm text-foreground">
+                {Math.round((new Date().getTime() - currentExperiment.startTime.getTime()) / 1000)}s
+              </span>
+            </div>
 
             <div className="mt-4 pt-4 border-t border-warning/20">
-              <p className="text-xs text-muted-foreground mb-2">Observations</p>
-              <ul className="space-y-1">
+              <p className="text-xs text-muted-foreground mb-2">Live Observations</p>
+              <ul className="space-y-1 max-h-[120px] overflow-y-auto scrollbar-thin">
                 {currentExperiment.observations.map((obs, i) => (
                   <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                     <span className="text-warning">•</span>
@@ -56,6 +89,19 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
                 ))}
               </ul>
             </div>
+
+            {currentExperiment.affectedServices.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-warning/20">
+                <p className="text-xs text-muted-foreground mb-2">Affected Services</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {currentExperiment.affectedServices.map(id => (
+                    <span key={id} className="px-2 py-0.5 text-xs font-mono bg-destructive/20 text-destructive rounded">
+                      {id}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -65,30 +111,30 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
             <span className="text-sm text-muted-foreground">No active experiment</span>
           </div>
           <p className="text-xs text-muted-foreground/70">
-            Inject a failure to start an experiment and observe system behavior
+            Click "Stop Service" or "Add Latency" on any service card to start an experiment
           </p>
         </div>
       )}
 
-      {/* Insights Panel */}
+      {/* Static Insights */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-3">
           <Lightbulb className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">Key Insights</span>
+          <span className="text-sm font-medium text-foreground">System Insights</span>
         </div>
         <div className="space-y-2">
           <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-lg">
             <Layers className="w-4 h-4 text-primary mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm text-foreground">Order Service has the most dependencies</p>
-              <p className="text-xs text-muted-foreground">Failing this service may cause widespread cascading failures</p>
+              <p className="text-sm text-foreground">Order Service is highly coupled</p>
+              <p className="text-xs text-muted-foreground">Depends on 4 services - potential bottleneck</p>
             </div>
           </div>
           <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-lg">
             <AlertCircle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm text-foreground">Authentication is a critical dependency</p>
-              <p className="text-xs text-muted-foreground">Multiple services depend on Auth; consider redundancy</p>
+              <p className="text-sm text-foreground">Auth is a single point of failure</p>
+              <p className="text-xs text-muted-foreground">5 services depend on it directly or indirectly</p>
             </div>
           </div>
         </div>
@@ -99,13 +145,15 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">Recent Experiments</span>
+            <span className="text-sm font-medium text-foreground">Completed Experiments</span>
+            <span className="text-xs text-muted-foreground ml-auto">{experimentHistory.length}</span>
           </div>
-          <div className="space-y-2 max-h-[200px] overflow-y-auto scrollbar-thin">
-            {experimentHistory.slice(0, 5).map(exp => (
-              <div 
+          <div className="space-y-2 max-h-[250px] overflow-y-auto scrollbar-thin">
+            {experimentHistory.slice(0, 10).map(exp => (
+              <button 
                 key={exp.id}
-                className="flex items-center justify-between p-3 bg-muted/20 rounded-lg"
+                onClick={() => setSelectedExperiment(exp)}
+                className="w-full flex items-center justify-between p-3 bg-muted/20 rounded-lg hover:bg-muted/40 transition-colors text-left"
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-success" />
@@ -114,12 +162,23 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
                     <p className="text-xs text-muted-foreground font-mono">{exp.failureType}</p>
                   </div>
                 </div>
-                {exp.recoveryTime && (
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {exp.recoveryTime}s recovery
-                  </span>
-                )}
-              </div>
+                <div className="flex items-center gap-2">
+                  {exp.recoveryTime && (
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {exp.recoveryTime}s
+                    </span>
+                  )}
+                  {exp.analysis && (
+                    <span className={cn(
+                      "text-xs px-1.5 py-0.5 rounded",
+                      exp.analysis.resilienceScore > 50 ? "bg-success/20 text-success" : "bg-warning/20 text-warning"
+                    )}>
+                      {exp.analysis.resilienceScore}
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </button>
             ))}
           </div>
         </div>
