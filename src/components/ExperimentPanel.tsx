@@ -1,8 +1,27 @@
 import { ExperimentResult } from '@/types/chaos';
 import { FlaskConical, Clock, Layers, AlertCircle, CheckCircle2, Lightbulb, ChevronRight, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ExperimentAnalysis } from './ExperimentAnalysis';
+
+// Live duration counter component
+function ExperimentDuration({ startTime }: { startTime: Date }) {
+  const [duration, setDuration] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDuration(Math.round((Date.now() - startTime.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+  
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-muted-foreground">Duration</span>
+      <span className="font-mono text-sm text-foreground">{duration}s</span>
+    </div>
+  );
+}
 
 interface ExperimentPanelProps {
   currentExperiment: ExperimentResult | null;
@@ -71,12 +90,7 @@ export function ExperimentPanel({ currentExperiment, experimentHistory }: Experi
               <span className="text-sm text-muted-foreground">Affected Services</span>
               <span className="font-mono text-sm text-destructive">{currentExperiment.affectedServices.length}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Duration</span>
-              <span className="font-mono text-sm text-foreground">
-                {Math.round((new Date().getTime() - currentExperiment.startTime.getTime()) / 1000)}s
-              </span>
-            </div>
+            <ExperimentDuration startTime={currentExperiment.startTime} />
 
             <div className="mt-4 pt-4 border-t border-warning/20">
               <p className="text-xs text-muted-foreground mb-2">Live Observations</p>
